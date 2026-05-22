@@ -1,0 +1,27 @@
+# █░█░█ █ █▄░█ █▀▄ █▀█ █░█░█  █▀█ █░█ █░░ █▀▀ █▀
+# ▀▄▀▄▀ █ █░▀█ █▄▀ █▄█ ▀▄▀▄▀  █▀▄ █▄█ █▄▄ ██▄ ▄█
+# ==========================================================
+
+# --- Floating Rules ---
+for_window [window_type="dialog"] floating enable
+for_window [window_type="utility"] floating enable
+for_window [window_type="splash"] floating enable
+for_window [window_type="menu"] floating enable
+for_window [window_type="popup_menu"] floating enable
+for_window [window_role="dialog"] floating enable
+for_window [window_role="pop-up"] floating enable
+
+# --- Floating Border & Title Bar ---
+default_floating_border normal 2
+default_border pixel 2
+
+# --- Mouse modifier untuk geser/resize ---
+floating_modifier $mod normal
+
+# Float semua window PacketTracer
+for_window [class="PacketTracer"] floating enable
+
+# Kecualikan window utama agar tetap tiling
+for_window [class="PacketTracer" title="Cisco Packet Tracer"] floating disable
+# Khusus PacketTracer beri corner radius agar keliatan floating
+for_window [class="PacketTracer"] corner_radius 8
