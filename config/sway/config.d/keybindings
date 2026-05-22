@@ -1,5 +1,5 @@
-# █▄▀ █▀▀ █▄█ █▄▄ █ █▄░█ █▀▄ █ █▄░█ █▀▀ █▀
-# █▀▄ ██▄ ░█░ █▄█ █ █░▀█ █▄▀ █ █░▀█ █▄█ ▄█
+# █░█ ▄▀█ █▀█ █ ▄▀█ █▄░█ █░░ █▀▀ █▀
+# ▀▄▀ █▀█ █▀▄ █ █▀█ █░▀█ █▄▄ ██▄ ▄█
 # ==========================================================
 
 # Logo key
@@ -56,9 +56,8 @@ bindsym --locked F6       exec ~/.config/sway/scripts/osd.sh bright_up
 bindsym --locked XF86AudioMicMute exec pactl set-source-mute @DEFAULT_SOURCE@ toggle
 
 # --- Screenshots ---
-# Tambahkan mkdir -p ~/Pictures/Screenshots di awal perintah
-bindsym Print             exec sh -c 'mkdir -p ~/Pictures/Screenshots && geom=$(slurp) && grim -g "$geom" - | tee >(wl-copy --type image/png) | swappy -f -'
-bindsym Shift+Print       exec sh -c 'mkdir -p ~/Pictures/Screenshots && grim - | tee >(wl-copy --type image/png) | swappy -f -'
+bindsym Print exec sh -c 'mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png && grim -g "$(slurp)" - | swappy -f - -o "$FILE" && wl-copy < "$FILE"'
+bindsym Shift+Print exec sh -c 'mkdir -p ~/Pictures/Screenshots && FILE=~/Pictures/Screenshots/$(date +%Y-%m-%d_%H-%M-%S).png && grim - | swappy -f - -o "$FILE" && wl-copy < "$FILE"'
 
 # --- Touchpad Gestures ---
 bindgesture swipe:right   exec ~/.config/sway/scripts/workspace-manager.sh prev
