@@ -18,7 +18,6 @@ jq
 # WAYLAND / SWAY
 # =========================
 
-swayfx
 swayidle
 swaylock
 rofi-wayland
@@ -90,12 +89,14 @@ obs-studio
 qbittorrent
 scrcpy
 mpv
+proton-vpn-gtk-app
 
 # =========================
 # DISPLAY MANAGER
 # =========================
 
 sddm
+vivid
 
 # =========================
 # VIRTUALIZATION
