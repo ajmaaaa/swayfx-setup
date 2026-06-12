@@ -45,7 +45,6 @@ bindsym $mod+Mod1+Up      exec ~/.config/sway/scripts/rofi-cycler.sh powermenu t
 bindsym $mod+Shift+s      exec ~/.config/rofi/applets/bin/screenshot.sh
 bindsym $mod+a            exec ~/.config/rofi/applets/bin/apps.sh
 bindsym $mod+m            exec ~/.config/rofi/applets/bin/mpd.sh
-bindsym $mod+Shift+i      exec ~/.config/sway/scripts/ai-menu.sh
 
 # --- Hardware & Media ---
 bindsym --locked F1       exec ~/.config/sway/scripts/osd.sh vol_mute
