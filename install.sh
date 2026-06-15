@@ -107,12 +107,27 @@ success "Pacman packages installed."
 
 if ! command -v yay &>/dev/null; then
   info "Installing yay AUR helper..."
-  if ! grep -q "--retry 5" /etc/makepkg.conf; then
+  if ! grep -qF -- "--retry 5" /etc/makepkg.conf; then
     sudo sed -i '/curl/s/-o %o %u/--retry 5 --retry-delay 5 -o %o %u/' /etc/makepkg.conf
   fi
   
   TMPDIR=$(mktemp -d)
-  git clone --depth=1 https://aur.archlinux.org/yay.git "$TMPDIR/yay"
+  YAY_CLONED=false
+  for i in $(seq 1 5); do
+    if git clone --depth=1 https://aur.archlinux.org/yay.git "$TMPDIR/yay"; then
+      YAY_CLONED=true
+      break
+    fi
+    warn "git clone failed, retrying... ($i/5)"
+    rm -rf "$TMPDIR/yay"
+    sleep 3
+  done
+  
+  if [[ "$YAY_CLONED" == false ]]; then
+    rm -rf "$TMPDIR"
+    error "Failed to clone yay repository after 5 attempts. Check your internet connection."
+  fi
+  
   cd "$TMPDIR/yay"
   makepkg -si --noconfirm
   cd "$SCRIPT_DIR"
