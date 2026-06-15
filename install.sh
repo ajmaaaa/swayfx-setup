@@ -141,15 +141,33 @@ fi
 # INSTALL AUR PACKAGES (WITH PGP ERROR HANDLING)
 # =============================================================================
 
+# Pre-configure GPG keyserver for reliable key fetching
+info "Configuring GPG keyserver for reliable AUR builds..."
+mkdir -p ~/.gnupg
+chmod 700 ~/.gnupg
+if ! grep -q 'keyserver hkps://keyserver.ubuntu.com' ~/.gnupg/gpg.conf 2>/dev/null; then
+  echo 'keyserver hkps://keyserver.ubuntu.com' >> ~/.gnupg/gpg.conf
+fi
+# Restart dirmngr to pick up new keyserver config
+gpgconf --kill dirmngr 2>/dev/null || true
+success "GPG keyserver configured."
+
 import_missing_pgp_key() {
   local output="$1"
   local key_id
-  key_id=$(echo "$output" | grep -oP '(?<=key |NO_PUBKEY )[0-9A-Fa-f]{8,}' | tail -n1)
+  # Extract key ID from various GPG/PGP error formats
+  key_id=$(echo "$output" | grep -oP '(?<=key |NO_PUBKEY |unknown public key |KEYEXPIRED |KEYREVOKED |signature from ")[0-9A-Fa-f]{8,}' | tail -n1)
+  # Fallback: try to find any 8+ hex string on lines containing 'key' or 'gpg' or 'signature'
+  if [[ -z "$key_id" ]]; then
+    key_id=$(echo "$output" | grep -iE 'key|gpg|pgp|signature' | grep -oP '[0-9A-Fa-f]{16,}' | tail -n1)
+  fi
   if [[ -n "$key_id" ]]; then
     warn "PGP key not found: $key_id - attempting automatic import..."
+    gpgconf --kill dirmngr 2>/dev/null || true
     gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys "$key_id" 2>/dev/null || \
     gpg --keyserver hkps://keys.openpgp.org --recv-keys "$key_id" 2>/dev/null || \
-    gpg --keyserver hkps://pgp.mit.edu --recv-keys "$key_id" 2>/dev/null
+    gpg --keyserver hkps://pgp.mit.edu --recv-keys "$key_id" 2>/dev/null || \
+    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "$key_id" 2>/dev/null
     return 0
   fi
   return 1
@@ -162,14 +180,14 @@ if [[ ${#AUR_PACKAGES[@]} -gt 0 ]]; then
   set +e # Temporarily disable exit on error to handle PGP issues manually
   for pkg in "${AUR_PACKAGES[@]}"; do
     info "Installing: $pkg"
-    install_output=$(yay -S --noconfirm --needed --answerdiff None --answerclean None "$pkg" 2>&1)
+    install_output=$(yay -S --noconfirm --needed --answerdiff None --answerclean None --pgpfetch "$pkg" 2>&1)
     install_status=$?
 
     if [[ $install_status -ne 0 ]]; then
-      if echo "$install_output" | grep -qiE "pgp|gpg|signature|key"; then
+      if echo "$install_output" | grep -qiE "pgp|gpg|signature|key|FAILED"; then
         import_missing_pgp_key "$install_output"
         info "Retrying $pkg after PGP key import..."
-        if yay -S --noconfirm --needed --answerdiff None --answerclean None "$pkg"; then
+        if yay -S --noconfirm --needed --answerdiff None --answerclean None --pgpfetch "$pkg"; then
           success "$pkg installed after PGP import."
         else
           warn "Failed to install $pkg even after PGP import."

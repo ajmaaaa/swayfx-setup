@@ -79,21 +79,17 @@ success "Theme berhasil disalin."
 # APPLY CONFIG
 # =============================================================================
 
-if [[ -f "$CONFIG_DIR/celestial.conf" ]]; then
+info "Mengatur konfigurasi SDDM..."
 
-  info "Mengatur konfigurasi SDDM..."
+sudo mkdir -p /etc/sddm.conf.d
 
-  sudo mkdir -p /etc/sddm.conf.d
+# Create SDDM system config to use celestial theme
+sudo tee /etc/sddm.conf.d/theme.conf > /dev/null << 'EOF'
+[Theme]
+Current=celestial
+EOF
 
-  sudo cp "$CONFIG_DIR/celestial.conf" /etc/sddm.conf.d/
-
-  success "Konfigurasi berhasil diterapkan."
-
-else
-
-  warn "File celestial.conf tidak ditemukan."
-
-fi
+success "SDDM dikonfigurasi untuk menggunakan theme celestial."
 
 # =============================================================================
 # PERMISSIONS

@@ -2,6 +2,10 @@
 # █▀█ █▄█ ░█░ █▄█ ▄█ ░█░ █▀█ █▀▄ ░█░
 # ==========================================================
 
+# --- NOTIFICATION DAEMON ---
+# Launch dunst with offset matching sway gaps (6px)
+exec_always pkill dunst; dunst -config /dev/null -offset 6x6 -corner_radius 8 -frame_width 2 &
+
 # --- SYSTEM TRAY ---
 
 # Restore Theme (Dark/Light) - Pastikan script toggle-theme.sh sudah ada

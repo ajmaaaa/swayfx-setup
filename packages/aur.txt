@@ -37,9 +37,7 @@ zoom
 # =========================
 
 android-studio
-antigravity
 antigravity-ide
-visual-studio-code-bin
 
 
 # =========================
