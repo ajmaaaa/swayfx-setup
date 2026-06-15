@@ -239,7 +239,7 @@ fi
 
 info "Copying configuration files..."
 
-for app in sway swappy alacritty; do
+for app in sway swappy alacritty dunst; do
   mkdir -p "$HOME/.config/$app"
   if [[ -d "$SCRIPT_DIR/config/$app" ]]; then
     cp -r "$SCRIPT_DIR/config/$app/." "$HOME/.config/$app/"

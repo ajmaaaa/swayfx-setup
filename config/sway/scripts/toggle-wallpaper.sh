@@ -12,13 +12,13 @@ STATE_FILE="$HOME/.config/sway/scripts/state_toggle/state_wallpaper"
 # --- FUNCTIONS ---
 set_wall_a() {
     swaymsg output "*" bg "$WALL_A" fill
-    notify-send -t 2000 "Wallpaper" "Mode Hinata Active"
+    notify-send -r 1001 -t 2000 "Wallpaper" "Mode Hinata Active"
     echo "A" > "$STATE_FILE"
 }
 
 set_wall_b() {
     swaymsg output "*" bg "$WALL_B" fill
-    notify-send -t 2000 "Wallpaper" "Mode Sword Active"
+    notify-send -r 1001 -t 2000 "Wallpaper" "Mode Sword Active"
     echo "B" > "$STATE_FILE"
 }
 

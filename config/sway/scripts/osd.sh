@@ -12,7 +12,7 @@ get_bright() { brightnessctl -m | cut -d, -f4; }
 
 # --- CONFIG ---
 ID_VOL="1001"
-ID_BRI="1002"
+ID_BRI="1001"
 TIMEOUT="3000"
 
 # --- LOGIC ---

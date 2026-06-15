@@ -51,7 +51,7 @@ set_light() {
 
     # 5. Save State & Notify
     echo "light" > "$STATE_FILE"
-    notify-send -t 2000 -i weather-clear "System Theme" "Light Mode Active"
+    notify-send -r 1001 -t 2000 -i weather-clear "System Theme" "Light Mode Active"
 }
 
 # Function: Activate Dark Mode
@@ -74,7 +74,7 @@ set_dark() {
 
     # 5. Save State & Notify
     echo "dark" > "$STATE_FILE"
-    notify-send -t 2000 -i weather-clear-night "System Theme" "Dark Mode Active"
+    notify-send -r 1001 -t 2000 -i weather-clear-night "System Theme" "Dark Mode Active"
 }
 
 # --- EXECUTION LOGIC ---
