@@ -26,6 +26,7 @@ slurp
 swappy
 wl-clipboard
 xdg-desktop-portal-wlr
+xdg-desktop-portal-gtk
 xorg-xwayland
 autotiling
 
@@ -123,6 +124,10 @@ snapper
 zip
 unzip
 7zip
+ntfs-3g
+dosfstools
+exfatprogs
+ufw
 xdg-user-dirs
 zsh
 zsh-autosuggestions
