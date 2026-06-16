@@ -127,7 +127,6 @@ unzip
 ntfs-3g
 dosfstools
 exfatprogs
-ufw
 xdg-user-dirs
 zsh
 zsh-autosuggestions
