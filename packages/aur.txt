@@ -46,8 +46,3 @@ antigravity-ide
 
 ttf-ms-fonts
 
-# =========================
-# VIEWER
-# =========================
-
-gimgv
