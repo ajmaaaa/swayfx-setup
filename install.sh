@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # =============================================================================
-# ARCH SETUP INSTALLER
+# ARCH SWAYFX SETUP INSTALLER
 # Automated Arch Linux post-install setup script
 # =============================================================================
 
@@ -15,12 +15,13 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
 YELLOW='\033[1;33m'
+BOLD='\033[1m'
 RESET='\033[0m'
 
-info() { echo -e "${BLUE}[INFO]${RESET} $1"; }
+info()    { echo -e "${BLUE}[INFO]${RESET} $1"; }
 success() { echo -e "${GREEN}[OK]${RESET} $1"; }
-warn() { echo -e "${YELLOW}[WARN]${RESET} $1"; }
-error() { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
+warn()    { echo -e "${YELLOW}[WARN]${RESET} $1"; }
+error()   { echo -e "${RED}[ERROR]${RESET} $1"; exit 1; }
 
 # =============================================================================
 # ROOT CHECK
@@ -43,7 +44,7 @@ SERVICES_FILE="$SCRIPT_DIR/packages/services.txt"
 
 for file in "$PACMAN_FILE" "$AUR_FILE" "$NPM_FILE" "$SERVICES_FILE"; do
   if [[ ! -f "$file" ]]; then
-    error "Missing file: $file"
+    error "Missing required file: $file"
   fi
 done
 
@@ -83,6 +84,134 @@ fi
 success "Internet connection is stable."
 
 # =============================================================================
+# INTERACTIVE PACKAGE SELECTION
+# =============================================================================
+
+# Ensure 'dialog' is available for the interactive TUI checklist
+ensure_dialog() {
+  if ! command -v dialog &>/dev/null; then
+    info "Installing 'dialog' for interactive package selection..."
+    sudo pacman -S --noconfirm dialog
+  fi
+}
+
+# Parse a package file and output lines in "package|CATEGORY" format.
+# Skips empty lines, separator lines (===), and inline comments.
+parse_packages() {
+  local file="$1"
+  local current_category="General"
+  while IFS= read -r line; do
+    # Skip empty lines
+    [[ -z "${line// }" ]] && continue
+    # Skip separator lines (lines containing only #, =, -, spaces)
+    [[ "$line" =~ ^[[:space:]]*#[[:space:]]*[=\-]+[[:space:]]*$ ]] && continue
+    # Detect category header: "# CATEGORY NAME"
+    if [[ "$line" =~ ^[[:space:]]*#[[:space:]]+([A-Za-z][A-Za-z0-9\ /\&\.\-]+)[[:space:]]*$ ]]; then
+      current_category="$(echo "${BASH_REMATCH[1]}" | sed 's/^[[:space:]]*//;s/[[:space:]]*$//')"
+    # Regular package line (not a comment)
+    elif [[ ! "$line" =~ ^[[:space:]]*# ]]; then
+      local pkg
+      pkg="$(echo "$line" | tr -d '[:space:]')"
+      [[ -n "$pkg" ]] && echo "$pkg|$current_category"
+    fi
+  done < "$file"
+}
+
+# Show an interactive dialog checklist for the given package file.
+# Stores selected packages into the given array variable name.
+show_checklist() {
+  local title="$1"
+  local file="$2"
+  local -n result_ref="$3"   # nameref to output array
+
+  local TMPFILE
+  TMPFILE=$(mktemp)
+
+  # Determine dialog dimensions based on terminal size
+  local H W LH
+  H=$(( $(tput lines) - 4 ))
+  W=$(( $(tput cols) - 6 ))
+  [[ $H -lt 20 ]] && H=20
+  [[ $W -lt 60 ]] && W=60
+  LH=$(( H - 8 ))
+
+  # Build checklist items: ("pkg" "[CATEGORY]" "on") ...
+  local ITEMS=()
+  while IFS='|' read -r pkg category; do
+    ITEMS+=("$pkg" "[$category]" "on")
+  done < <(parse_packages "$file")
+
+  dialog \
+    --title " $title " \
+    --backtitle "Arch SwayFX Setup — Package Selection" \
+    --checklist "\nSelect packages to install.\n\n  SPACE = toggle on/off   ENTER = confirm   TAB = switch buttons\n" \
+    "$H" "$W" "$LH" \
+    "${ITEMS[@]}" 2>"$TMPFILE"
+
+  local EXIT_CODE=$?
+
+  if [[ $EXIT_CODE -ne 0 ]]; then
+    rm -f "$TMPFILE"
+    clear
+    warn "Selection cancelled for '$title'. Falling back to all recommended packages."
+    # Fallback: load all packages from file
+    mapfile -t result_ref < <(grep -vE '^\s*#|^\s*$' "$file")
+    return 1
+  fi
+
+  # Parse dialog output: space-separated, possibly quoted
+  mapfile -t result_ref < <(cat "$TMPFILE" | tr -d '"' | tr ' ' '\n' | grep -v '^$')
+  rm -f "$TMPFILE"
+  clear
+  return 0
+}
+
+# Full interactive package selection flow (pacman + AUR)
+select_packages_interactively() {
+  ensure_dialog
+  show_checklist "Pacman Packages" "$PACMAN_FILE" FINAL_PACMAN_PACKAGES
+  show_checklist "AUR Packages"    "$AUR_FILE"    FINAL_AUR_PACKAGES
+}
+
+# --- PROMPT USER ---
+echo ""
+echo -e "${BLUE}╔══════════════════════════════════════════════════════╗${RESET}"
+echo -e "${BLUE}║          PACKAGE INSTALLATION OPTIONS                ║${RESET}"
+echo -e "${BLUE}╠══════════════════════════════════════════════════════╣${RESET}"
+echo -e "${BLUE}║  ${GREEN}[Y]${RESET}  Install with all recommended packages          ${BLUE}║${RESET}"
+echo -e "${BLUE}║  ${YELLOW}[N]${RESET}  Choose packages interactively (checklist)      ${BLUE}║${RESET}"
+echo -e "${BLUE}╚══════════════════════════════════════════════════════╝${RESET}"
+echo ""
+read -rp "  Proceed with all recommended packages? [Y/n]: " INSTALL_ALL
+INSTALL_ALL="${INSTALL_ALL:-Y}"
+
+# Initialize arrays with all recommended packages (default)
+mapfile -t FINAL_PACMAN_PACKAGES < <(grep -vE '^\s*#|^\s*$' "$PACMAN_FILE")
+mapfile -t FINAL_AUR_PACKAGES    < <(grep -vE '^\s*#|^\s*$' "$AUR_FILE")
+
+if [[ "${INSTALL_ALL,,}" == "n" ]]; then
+  select_packages_interactively
+fi
+
+info "Installing ${#FINAL_PACMAN_PACKAGES[@]} pacman packages and ${#FINAL_AUR_PACKAGES[@]} AUR packages."
+
+# =============================================================================
+# CONFIGURE PACMAN FOR BETTER DOWNLOAD RELIABILITY
+# =============================================================================
+
+info "Configuring pacman for reliable downloads..."
+# Enable parallel downloads
+if ! grep -q '^ParallelDownloads' /etc/pacman.conf; then
+  sudo sed -i '/^#ParallelDownloads/s/^#//' /etc/pacman.conf
+fi
+# Add curl retry to XferCommand
+if ! grep -q 'XferCommand' /etc/pacman.conf; then
+  echo -e '\nXferCommand = /usr/bin/curl --retry 5 --retry-delay 5 --connect-timeout 30 -L -o %o %u' \
+    | sudo tee -a /etc/pacman.conf > /dev/null
+fi
+success "Pacman configured."
+
+# =============================================================================
 # SYSTEM UPDATE
 # =============================================================================
 
@@ -94,23 +223,38 @@ sudo pacman -Syu --noconfirm
 # =============================================================================
 
 info "Installing pacman packages..."
-PACMAN_PACKAGES=$(grep -vE '^\s*#|^\s*$' "$PACMAN_FILE")
 
-if [[ -n "$PACMAN_PACKAGES" ]]; then
-  sudo pacman -S --needed --noconfirm $PACMAN_PACKAGES
+if [[ ${#FINAL_PACMAN_PACKAGES[@]} -gt 0 ]]; then
+  set +e
+  PACMAN_FAILED=()
+  for pkg in "${FINAL_PACMAN_PACKAGES[@]}"; do
+    if ! sudo pacman -S --needed --noconfirm "$pkg"; then
+      warn "Failed to install '$pkg' — retrying once..."
+      sleep 3
+      if ! sudo pacman -S --needed --noconfirm "$pkg"; then
+        warn "Skipping '$pkg' after retry failure."
+        PACMAN_FAILED+=("$pkg")
+      fi
+    fi
+  done
+  set -e
+  if [[ ${#PACMAN_FAILED[@]} -gt 0 ]]; then
+    warn "The following pacman packages failed: ${PACMAN_FAILED[*]}"
+  fi
 fi
 success "Pacman packages installed."
 
 # =============================================================================
-# INSTALL YAY
+# INSTALL YAY (AUR HELPER)
 # =============================================================================
 
 if ! command -v yay &>/dev/null; then
   info "Installing yay AUR helper..."
+  # Add curl retry flag to makepkg config
   if ! grep -qF -- "--retry 5" /etc/makepkg.conf; then
     sudo sed -i '/curl/s/-o %o %u/--retry 5 --retry-delay 5 -o %o %u/' /etc/makepkg.conf
   fi
-  
+
   TMPDIR=$(mktemp -d)
   YAY_CLONED=false
   for i in $(seq 1 5); do
@@ -122,12 +266,12 @@ if ! command -v yay &>/dev/null; then
     rm -rf "$TMPDIR/yay"
     sleep 3
   done
-  
+
   if [[ "$YAY_CLONED" == false ]]; then
     rm -rf "$TMPDIR"
     error "Failed to clone yay repository after 5 attempts. Check your internet connection."
   fi
-  
+
   cd "$TMPDIR/yay"
   makepkg -si --noconfirm
   cd "$SCRIPT_DIR"
@@ -138,68 +282,108 @@ else
 fi
 
 # =============================================================================
-# INSTALL AUR PACKAGES (WITH PGP ERROR HANDLING)
+# INSTALL AUR PACKAGES (WITH PGP ERROR HANDLING + RETRY)
 # =============================================================================
 
-# Pre-configure GPG keyserver for reliable key fetching
-info "Configuring GPG keyserver for reliable AUR builds..."
+# Configure GPG keyserver for reliable AUR builds
+info "Configuring GPG keyserver..."
 mkdir -p ~/.gnupg
 chmod 700 ~/.gnupg
 if ! grep -q 'keyserver hkps://keyserver.ubuntu.com' ~/.gnupg/gpg.conf 2>/dev/null; then
   echo 'keyserver hkps://keyserver.ubuntu.com' >> ~/.gnupg/gpg.conf
 fi
-# Restart dirmngr to pick up new keyserver config
 gpgconf --kill dirmngr 2>/dev/null || true
 success "GPG keyserver configured."
 
+# Attempt to import a missing PGP key extracted from build error output
 import_missing_pgp_key() {
   local output="$1"
   local key_id
-  # Extract key ID from various GPG/PGP error formats
+
+  # Try to extract key ID from various GPG/makepkg error formats
   key_id=$(echo "$output" | grep -oP '(?<=key |NO_PUBKEY |unknown public key |KEYEXPIRED |KEYREVOKED |signature from ")[0-9A-Fa-f]{8,}' | tail -n1)
-  # Fallback: try to find any 8+ hex string on lines containing 'key' or 'gpg' or 'signature'
+
+  # Fallback: scan lines mentioning key/gpg/pgp/signature for any 16+ char hex string
   if [[ -z "$key_id" ]]; then
     key_id=$(echo "$output" | grep -iE 'key|gpg|pgp|signature' | grep -oP '[0-9A-Fa-f]{16,}' | tail -n1)
   fi
-  if [[ -n "$key_id" ]]; then
-    warn "PGP key not found: $key_id - attempting automatic import..."
-    gpgconf --kill dirmngr 2>/dev/null || true
-    gpg --keyserver hkps://keyserver.ubuntu.com --recv-keys "$key_id" 2>/dev/null || \
-    gpg --keyserver hkps://keys.openpgp.org --recv-keys "$key_id" 2>/dev/null || \
-    gpg --keyserver hkps://pgp.mit.edu --recv-keys "$key_id" 2>/dev/null || \
-    gpg --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys "$key_id" 2>/dev/null
-    return 0
+
+  if [[ -z "$key_id" ]]; then
+    warn "Could not extract PGP key ID from error output. Manual fix may be needed."
+    warn "Relevant output: $(echo "$output" | grep -iE 'key|gpg|pgp|signature' | head -5)"
+    return 1
   fi
+
+  warn "PGP key not found: $key_id — attempting import via --recv-keys..."
+  gpgconf --kill dirmngr 2>/dev/null || true
+
+  local KEYSERVERS=(
+    "hkps://keyserver.ubuntu.com"
+    "hkps://keys.openpgp.org"
+    "hkps://pgp.mit.edu"
+    "hkp://keyserver.ubuntu.com:80"
+  )
+
+  for ks in "${KEYSERVERS[@]}"; do
+    info "Trying keyserver: $ks"
+    if gpg --keyserver "$ks" --recv-keys "$key_id"; then
+      success "PGP key $key_id imported from $ks."
+      return 0
+    fi
+    warn "Failed from $ks, trying next..."
+  done
+
+  warn "All keyservers failed for key $key_id."
+  warn "You can try manually: gpg --recv-keys $key_id"
   return 1
 }
 
 info "Installing AUR packages..."
-mapfile -t AUR_PACKAGES < <(grep -vE '^\s*#|^\s*$' "$AUR_FILE")
 
-if [[ ${#AUR_PACKAGES[@]} -gt 0 ]]; then
-  set +e # Temporarily disable exit on error to handle PGP issues manually
-  for pkg in "${AUR_PACKAGES[@]}"; do
+AUR_MAX_RETRY=3
+
+if [[ ${#FINAL_AUR_PACKAGES[@]} -gt 0 ]]; then
+  set +e
+  AUR_FAILED=()
+  for pkg in "${FINAL_AUR_PACKAGES[@]}"; do
     info "Installing: $pkg"
-    install_output=$(yay -S --noconfirm --needed --answerdiff None --answerclean None --pgpfetch "$pkg" 2>&1)
-    install_status=$?
+    PKG_INSTALLED=false
 
-    if [[ $install_status -ne 0 ]]; then
-      if echo "$install_output" | grep -qiE "pgp|gpg|signature|key|FAILED"; then
-        import_missing_pgp_key "$install_output"
-        info "Retrying $pkg after PGP key import..."
-        if yay -S --noconfirm --needed --answerdiff None --answerclean None --pgpfetch "$pkg"; then
-          success "$pkg installed after PGP import."
-        else
-          warn "Failed to install $pkg even after PGP import."
-        fi
-      else
-        warn "Failed to install $pkg (Not a PGP issue)."
+    for attempt in $(seq 1 $AUR_MAX_RETRY); do
+      install_output=$(yay -S --noconfirm --needed --answerdiff None --answerclean None --pgpfetch "$pkg" 2>&1)
+      install_status=$?
+
+      if [[ $install_status -eq 0 ]]; then
+        success "$pkg installed successfully."
+        PKG_INSTALLED=true
+        break
       fi
-    else
-      success "$pkg installed successfully."
+
+      warn "Attempt $attempt/$AUR_MAX_RETRY failed for $pkg."
+
+      # Handle PGP/GPG key issues before retrying
+      if echo "$install_output" | grep -qiE "pgp|gpg|signature|key|FAILED"; then
+        warn "PGP issue detected — attempting key import..."
+        import_missing_pgp_key "$install_output"
+      fi
+
+      if [[ $attempt -lt $AUR_MAX_RETRY ]]; then
+        warn "Retrying $pkg in 5 seconds..."
+        sleep 5
+      fi
+    done
+
+    if [[ "$PKG_INSTALLED" == false ]]; then
+      warn "Skipping $pkg after $AUR_MAX_RETRY failed attempts."
+      AUR_FAILED+=("$pkg")
     fi
   done
-  set -e # Re-enable exit on error
+  set -e
+
+  if [[ ${#AUR_FAILED[@]} -gt 0 ]]; then
+    warn "The following AUR packages failed to install: ${AUR_FAILED[*]}"
+    warn "Install them manually later with: yay -S ${AUR_FAILED[*]}"
+  fi
 fi
 
 # =============================================================================
@@ -215,7 +399,7 @@ fi
 success "Global npm packages installed."
 
 # =============================================================================
-# ENABLE SERVICES & QEMU GROUP
+# ENABLE SYSTEM SERVICES
 # =============================================================================
 
 info "Enabling system services..."
@@ -225,6 +409,7 @@ while read -r service; do
   success "$service enabled."
 done < "$SERVICES_FILE"
 
+# Add user to libvirt/kvm groups if libvirtd is in the services list
 if grep -q "libvirtd.service" "$SERVICES_FILE"; then
   info "Adding user to libvirt and kvm groups..."
   sudo usermod -aG libvirt,kvm "$USER"
@@ -234,7 +419,7 @@ if grep -q "libvirtd.service" "$SERVICES_FILE"; then
 fi
 
 # =============================================================================
-# COPY CONFIG FILES & CHMOD
+# COPY CONFIGURATION FILES
 # =============================================================================
 
 info "Copying configuration files..."
@@ -247,6 +432,7 @@ for app in sway swappy alacritty dunst; do
   fi
 done
 
+# Make sway scripts executable
 if [[ -d "$HOME/.config/sway/scripts" ]]; then
   info "Setting executable permissions for sway scripts..."
   chmod +x "$HOME"/.config/sway/scripts/* 2>/dev/null || true
@@ -321,7 +507,7 @@ ln -sf ~/.config/rofi/powermenu/type-1/powermenu.sh ~/.config/rofi/powermenu_act
 success "Rofi themes installed and symlinked."
 
 # =============================================================================
-# POWERLEVEL10K & ZSHRC
+# POWERLEVEL10K & ZSH
 # =============================================================================
 
 info "Setting up Powerlevel10k and ZSH..."
@@ -346,7 +532,7 @@ if [[ "$SHELL" != "$(which zsh)" ]]; then
 fi
 
 # =============================================================================
-# INSTALL CELESTIAL SDDM
+# INSTALL CELESTIAL SDDM THEME
 # =============================================================================
 
 info "Setting up celestial-sddm..."
@@ -358,10 +544,16 @@ if [[ -d "$SDDM_SOURCE" ]]; then
   rm -rf "$SDDM_TARGET"
   mkdir -p "$SDDM_TARGET"
   cp -r "$SDDM_SOURCE/." "$SDDM_TARGET/"
-  
-  info "Applying executable permissions for SDDM scripts..."
+
+  info "Setting executable permissions for SDDM scripts..."
   find "$SDDM_TARGET" -type f -name "*.sh" -exec chmod +x {} \;
-  
+
+  # Ensure qt6-virtualkeyboard is installed — required by the celestial theme
+  if ! pacman -Qi qt6-virtualkeyboard &>/dev/null; then
+    info "Installing qt6-virtualkeyboard (required for celestial theme)..."
+    sudo pacman -S --noconfirm --needed qt6-virtualkeyboard
+  fi
+
   if [[ -f "$SDDM_TARGET/install.sh" ]]; then
     info "Running celestial-sddm installer..."
     cd "$SDDM_TARGET"
@@ -375,8 +567,15 @@ else
   warn "sddm/celestial-sddm directory not found. Skipping SDDM setup."
 fi
 
+# Verify SDDM theme installation
+if [[ -d "/usr/share/sddm/themes/celestial" ]]; then
+  success "SDDM celestial theme verified at /usr/share/sddm/themes/celestial."
+else
+  warn "SDDM theme directory not found — theme may not have been installed correctly."
+fi
+
 # =============================================================================
-# FINISHED
+# INSTALLATION COMPLETE
 # =============================================================================
 
 echo ""

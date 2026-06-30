@@ -38,7 +38,7 @@ error() {
 # =============================================================================
 
 if [[ "$EUID" -eq 0 ]]; then
-  error "Jangan jalankan script sebagai root."
+  error "Do not run this script as root."
 fi
 
 # =============================================================================
@@ -58,14 +58,14 @@ CONFIG_DIR="$SCRIPT_DIR/configs"
 # =============================================================================
 
 if ! command -v sddm &>/dev/null; then
-  error "SDDM belum terinstall."
+  error "SDDM is not installed."
 fi
 
 # =============================================================================
 # INSTALL THEME
 # =============================================================================
 
-info "Menginstall theme celestial SDDM..."
+info "Installing celestial SDDM theme..."
 
 sudo rm -rf "$SDDM_THEME_DIR"
 
@@ -73,13 +73,13 @@ sudo mkdir -p "$SDDM_THEME_DIR"
 
 sudo cp -r "$SCRIPT_DIR/." "$SDDM_THEME_DIR/"
 
-success "Theme berhasil disalin."
+success "Theme files copied successfully."
 
 # =============================================================================
 # APPLY CONFIG
 # =============================================================================
 
-info "Mengatur konfigurasi SDDM..."
+info "Applying SDDM configuration..."
 
 sudo mkdir -p /etc/sddm.conf.d
 
@@ -89,17 +89,17 @@ sudo tee /etc/sddm.conf.d/theme.conf > /dev/null << 'EOF'
 Current=celestial
 EOF
 
-success "SDDM dikonfigurasi untuk menggunakan theme celestial."
+success "SDDM configured to use the celestial theme."
 
 # =============================================================================
 # PERMISSIONS
 # =============================================================================
 
-info "Mengatur permissions..."
+info "Setting permissions..."
 
 sudo chmod -R 755 "$SDDM_THEME_DIR"
 
-success "Permissions berhasil diatur."
+success "Permissions set successfully."
 
 # =============================================================================
 # DONE

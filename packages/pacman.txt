@@ -97,6 +97,7 @@ proton-vpn-gtk-app
 # =========================
 
 sddm
+qt6-virtualkeyboard
 vivid
 
 # =========================

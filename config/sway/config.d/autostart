@@ -8,11 +8,11 @@ exec_always pkill dunst; dunst &
 
 # --- SYSTEM TRAY ---
 
-# Restore Theme (Dark/Light) - Pastikan script toggle-theme.sh sudah ada
+# Restore Theme (Dark/Light) — make sure toggle-theme.sh exists before enabling
 #exec ~/.config/sway/scripts/toggle-theme.sh restore
 
 # --- WORKSPACE MANAGEMENT ---
-# Jalankan Workspace Manager dalam mode Watcher (Background)
+# Launch Workspace Manager in watcher mode (background daemon)
 exec_always ~/.config/sway/scripts/workspace-manager.sh watch &
 
 # Autotiling script (Switch between split v/h automatically)

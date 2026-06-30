@@ -15,13 +15,13 @@ for_window [window_role="pop-up"] floating enable
 default_floating_border normal 2
 default_border pixel 2
 
-# --- Mouse modifier untuk geser/resize ---
+# --- Mouse modifier for dragging/resizing floating windows ---
 floating_modifier $mod normal
 
-# Float semua window PacketTracer
+# Float all PacketTracer windows (popups, dialogs, etc.)
 for_window [class="PacketTracer"] floating enable
 
-# Kecualikan window utama agar tetap tiling
+# Keep the main PacketTracer window tiled
 for_window [class="PacketTracer" title="Cisco Packet Tracer"] floating disable
-# Khusus PacketTracer beri corner radius agar keliatan floating
+# Apply corner radius to floating PacketTracer windows
 for_window [class="PacketTracer"] corner_radius 8
