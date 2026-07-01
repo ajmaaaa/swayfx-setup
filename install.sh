@@ -438,6 +438,10 @@ for app in sway swappy alacritty dunst; do
   fi
 done
 
+# Initialize theme state to dark mode by default
+mkdir -p "$HOME/.config/sway"
+echo "dark" > "$HOME/.config/sway/state_theme"
+
 # Make sway scripts executable
 if [[ -d "$HOME/.config/sway/scripts" ]]; then
   info "Setting executable permissions for sway scripts..."
@@ -580,6 +584,68 @@ if [[ -d "/usr/share/sddm/themes/celestial" ]]; then
 else
   warn "SDDM theme directory not found — theme may not have been installed correctly."
 fi
+
+# =============================================================================
+# BOOTLOADER, MKINITCPIO & PLYMOUTH SETUP
+# =============================================================================
+
+configure_bootloader_and_plymouth() {
+  info "Configuring bootloader and Plymouth..."
+
+  # 1. Plymouth configuration
+  info "Configuring /etc/plymouth/plymouthd.conf..."
+  sudo mkdir -p /etc/plymouth
+  sudo tee /etc/plymouth/plymouthd.conf > /dev/null << 'EOF'
+[Daemon]
+Theme=spinner
+ShowDelay=0
+DeviceTimeout=8
+EOF
+  success "Plymouth configuration written."
+
+  # 2. Add plymouth to mkinitcpio hooks if present
+  if [[ -f "/etc/mkinitcpio.conf" ]]; then
+    info "Configuring mkinitcpio for plymouth..."
+    if ! grep -q "^HOOKS=.*plymouth" /etc/mkinitcpio.conf; then
+      sudo sed -i 's/\(udev\)/\1 plymouth/' /etc/mkinitcpio.conf
+      success "Added plymouth hook to /etc/mkinitcpio.conf"
+    else
+      info "plymouth hook already present in /etc/mkinitcpio.conf"
+    fi
+    info "Regenerating initramfs..."
+    sudo mkinitcpio -P || true
+  fi
+
+  # 3. Configure Loader Timeout & Plymouth parameters (quiet splash)
+  # For systemd-boot config (timeout)
+  for loader_conf in "/boot/loader/loader.conf" "/efi/loader/loader.conf" "/boot/efi/loader/loader.conf"; do
+    if [[ -f "$loader_conf" ]]; then
+      info "Found systemd-boot config at $loader_conf. Setting timeout to 0..."
+      sudo sed -i 's/^timeout.*/timeout 0/' "$loader_conf"
+    fi
+  done
+
+  # For systemd-boot entries (quiet splash)
+  for entry_dir in "/boot/loader/entries" "/efi/loader/entries" "/boot/efi/loader/entries"; do
+    if [[ -d "$entry_dir" ]]; then
+      info "Found systemd-boot entries directory at $entry_dir. Adjusting entries for Plymouth..."
+      find "$entry_dir" -type f -name "*.conf" | while read -r entry_file; do
+        if grep -q "^options " "$entry_file"; then
+          local options_line
+          options_line=$(grep "^options " "$entry_file")
+          [[ ! "$options_line" =~ "quiet" ]] && options_line="$options_line quiet"
+          [[ ! "$options_line" =~ "splash" ]] && options_line="$options_line splash"
+          sudo sed -i "s|^options .*|$options_line|" "$entry_file"
+          success "Updated systemd-boot entry: $(basename "$entry_file")"
+        fi
+      done
+    fi
+  done
+
+  # GRUB configuration removed as the user uses systemd-boot
+}
+
+configure_bootloader_and_plymouth
 
 # =============================================================================
 # INSTALLATION COMPLETE

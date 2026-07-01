@@ -85,8 +85,8 @@ if [ "$1" == "restore" ]; then
         CURRENT=$(cat "$STATE_FILE")
         [ "$CURRENT" == "dark" ] && set_dark || set_light
     else
-        # Default to Light if no state found
-        set_light
+        # Default to Dark if no state found
+        set_dark
     fi
     exit 0
 fi

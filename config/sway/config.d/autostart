@@ -9,7 +9,7 @@ exec_always pkill dunst; dunst &
 # --- SYSTEM TRAY ---
 
 # Restore Theme (Dark/Light) — make sure toggle-theme.sh exists before enabling
-#exec ~/.config/sway/scripts/toggle-theme.sh restore
+exec ~/.config/sway/scripts/toggle-theme.sh restore
 
 # --- WORKSPACE MANAGEMENT ---
 # Launch Workspace Manager in watcher mode (background daemon)
