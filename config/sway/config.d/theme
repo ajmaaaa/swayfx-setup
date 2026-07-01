@@ -7,8 +7,15 @@ gaps inner 6
 gaps outer 0
 smart_gaps off
 
-default_border pixel 2
-default_floating_border pixel 2
+default_border pixel 1
+default_floating_border pixel 1
 
 # --- CURSOR ---
 seat seat0 xcursor_theme Vimix-cursors 30
+
+# --- COLORS (Celestial theme: white active, grey inactive) ---
+# class                 border  backgr. text    indicator child_border
+client.focused          #ffffff #333333 #ffffff #ffffff   #ffffff
+client.focused_inactive #333333 #333333 #888888 #333333   #333333
+client.unfocused        #333333 #333333 #888888 #333333   #333333
+
