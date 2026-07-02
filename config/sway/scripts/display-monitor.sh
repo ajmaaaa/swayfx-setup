@@ -3,7 +3,7 @@
 # █▀▄ █ █▀ █▀█ █░░ ▄▀█ █▄█
 # █▄▀ █ ▄█ █▀▀ █▄▄ █▀█ ░█░
 # ==========================================================
-# Adaptasi dari sway display-monitor.sh → pakai swaymsg & Rofi Applet
+# Adapted from sway display-monitor.sh → use swaymsg & Rofi Applet
 
 # --- CONFIGURATION ---
 LAPTOP="eDP-1"       
