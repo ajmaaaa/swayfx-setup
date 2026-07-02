@@ -45,6 +45,8 @@ QtObject {
     property int dateFontWeight: config.intValue("LockScreen.Date/font-weight") || 400 // @desc:Font weight of the date. 400 = regular, 600 = bold, 800 = black
     property color dateColor: config.stringValue("LockScreen.Date/color") || "#FFFFFF" // @desc:Color of the date.
     property int dateMarginTop: config.intValue("LockScreen.Date/margin-top") // @desc:Top margin from the clock
+    property int dateMarginLeft: config.intValue("LockScreen.Date/margin-left") // @desc:Left margin of the date
+    property int dateMarginRight: config.intValue("LockScreen.Date/margin-right") // @desc:Right margin of the date
 
     // [LockScreen.Message]
     property bool lockMessageDisplay: config['LockScreen.Message/display'] === "false" ? false : true // @desc:Whether or not to display the custom message in the lock screen.

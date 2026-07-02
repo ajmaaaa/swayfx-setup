@@ -523,7 +523,16 @@ rm -rf "$TMPDIR"
 ln -sf ~/.config/rofi/launchers/type-6/launcher.sh ~/.config/rofi/launcher_active.sh
 sed -i "s/theme=.*/theme='style-7'/g" ~/.config/rofi/launchers/type-6/launcher.sh
 ln -sf ~/.config/rofi/powermenu/type-1/powermenu.sh ~/.config/rofi/powermenu_active.sh
-success "Rofi themes installed and symlinked."
+  # Patch Rofi powermenus to use Sway and Hyprland exit
+  for powermenu in ~/.config/rofi/powermenu/type-*/powermenu.sh; do
+    if [[ -f "$powermenu" ]]; then
+      # Patch logout for Sway and Hyprland
+      if ! grep -q "swaymsg exit" "$powermenu"; then
+        sed -i 's/openbox --exit/openbox --exit\n\t\t\telif [[ "$DESKTOP_SESSION" == '\''sway'\'' || -n "$SWAYSOCK" ]]; then\n\t\t\t\tswaymsg exit\n\t\t\telif [[ "$DESKTOP_SESSION" == '\''hyprland'\'' || "$DESKTOP_SESSION" == '\''Hyprland'\'' || -n "$HYPRLAND_INSTANCE_SIGNATURE" ]]; then\n\t\t\t\thyprctl dispatch '\''hl.dsp.exit()'\''/g' "$powermenu"
+      fi
+    fi
+  done
+  success "Rofi themes installed, symlinked, and patched for Sway/Hyprland."
 
 # =============================================================================
 # POWERLEVEL10K & ZSH
