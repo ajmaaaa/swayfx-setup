@@ -22,7 +22,6 @@ bindsym $mod+space        exec ~/.config/rofi/launcher_active.sh
 bindsym $mod+f            exec dolphin
 bindsym $mod+z            exec $browser1
 bindsym $mod+b            exec $browser2
-bindsym $mod+x            exec $browser3
 bindsym $mod+c            exec antigravity-ide
 bindsym $mod+n            exec $term -e nvim
 bindsym $mod+p            exec ~/.config/sway/scripts/display-monitor.sh

@@ -10,7 +10,7 @@ swayfx
 
 zen-browser-bin
 brave-bin
-librewolf-bin
+
 
 # =========================
 # OFFICE
